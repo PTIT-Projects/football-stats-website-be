@@ -9,19 +9,20 @@ import java.time.LocalDateTime;
 
 @Entity
 @Data
-@Table(name="matches")
+@Table(name="matches"
+,uniqueConstraints=@UniqueConstraint(columnNames = {"host_id","away_id","season_id"}))
 public class Match {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
     @ManyToOne
     @JoinColumn(name="host_id")
-    @Id
     private Club host;
     @ManyToOne
     @JoinColumn(name="away_id")
-    @Id
     private Club away;
     @ManyToOne
     @JoinColumn(name="season_id")
-    @Id
     private LeagueSeason season;
     //MatchAction
 //    @OneToMany(mappedBy = "hostTeam")

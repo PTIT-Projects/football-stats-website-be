@@ -6,17 +6,11 @@ import jakarta.persistence.*;
 public class MatchAction {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int id;
+    private Long id;
     private String action;
     private int minute;
     @ManyToOne
-    @JoinColumn(name="host_id")
-//    private Club hostTeam;
-//    @ManyToOne
-    @JoinColumn(name="away_id")
-//    private Club awayTeam;
-//    @ManyToOne
-    @JoinColumn(name="season_id")
+    @JoinColumn(name = "match_id")
     private Match match;
     @ManyToOne
     @JoinColumn(name = "player_id")
