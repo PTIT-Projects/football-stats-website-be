@@ -13,9 +13,9 @@ public class ResponseClubDTO {
     private String name;
     private String country;
     private String stadiumName;
+    // Field to return the club logo image URL/path
+    private String imagePath;
 
-//    private List<CoachClub> coachClubs;
-//    private List<ClubSeasonTable> clubSeasonTables;
     private List<ResponseCreateTransferHistoryDTO> transferHistories;
     private CoachDTO currentCoach;
     private List<PlayerDTO> currentPlayerList;

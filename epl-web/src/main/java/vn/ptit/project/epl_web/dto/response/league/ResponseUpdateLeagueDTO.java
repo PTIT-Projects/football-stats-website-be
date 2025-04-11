@@ -11,5 +11,7 @@ import java.util.List;
 public class ResponseUpdateLeagueDTO {
     private Long id;
     private String name;
+    // Field to return the league logo image URL/path
+    private String imagePath;
     private List<LeagueSeasonDTO> leagueSeasons;
 }

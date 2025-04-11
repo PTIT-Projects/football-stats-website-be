@@ -15,6 +15,8 @@ public class ResponseCoachDTO {
     private String name;
     private int age;
     private LocalDate dob;
+    // Field to return the coach image URL/path
+    private String imagePath;
     private List<String> citizenships;
     public List<ResponseCoachClubDTO> coachClubs;
     private ClubDTO currentClub;

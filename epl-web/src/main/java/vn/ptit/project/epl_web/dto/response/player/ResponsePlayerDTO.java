@@ -17,6 +17,7 @@ public class ResponsePlayerDTO {
     private int shirtNumber;
     private double marketValue;
     private String currentClub;
+    private String imagePath;
     private List<String> citizenships;
     private List<String> positions;
     private List<ResponseCreateTransferHistoryDTO> transferHistories;
