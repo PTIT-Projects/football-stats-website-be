@@ -15,6 +15,10 @@ public class HeadCoach {
     private Long id;
     private String name;
     private LocalDate dob;
+    
+    // Field to store the coach image URL/path
+    private String imagePath;
+    
     @ElementCollection
     @CollectionTable(name = "coach_citizenship", joinColumns = @JoinColumn(name = "head_coach_id"))
     @Column(name = "citizenship")

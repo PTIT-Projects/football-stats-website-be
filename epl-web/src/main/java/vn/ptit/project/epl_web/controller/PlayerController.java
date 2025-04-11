@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import vn.ptit.project.epl_web.domain.Player;
 import vn.ptit.project.epl_web.dto.request.player.RequestCreatePlayerDTO;
 import vn.ptit.project.epl_web.dto.request.player.RequestUpdatePlayerDTO;
@@ -16,9 +17,11 @@ import vn.ptit.project.epl_web.dto.response.ResultPaginationDTO;
 import vn.ptit.project.epl_web.dto.response.player.ResponseCreatePlayerDTO;
 import vn.ptit.project.epl_web.dto.response.player.ResponsePlayerDTO;
 import vn.ptit.project.epl_web.dto.response.player.ResponseUpdatePlayerDTO;
+import vn.ptit.project.epl_web.service.FileStorageService;
 import vn.ptit.project.epl_web.service.PlayerService;
 import vn.ptit.project.epl_web.util.annotation.ApiMessage;
 import vn.ptit.project.epl_web.util.exception.InvalidRequestException;
+import vn.ptit.project.epl_web.util.exception.ResourceNotFoundException;
 
 import java.util.Optional;
 
@@ -26,30 +29,61 @@ import java.util.Optional;
 @RequestMapping("/api/v1/players")
 public class PlayerController {
     private final PlayerService playerService;
+    private final FileStorageService fileStorageService;
 
-    public PlayerController(PlayerService playerService) {
+    public PlayerController(PlayerService playerService, FileStorageService fileStorageService) {
         this.playerService = playerService;
+        this.fileStorageService = fileStorageService;
     }
 
     @PostMapping("")
-    @ApiMessage("Create a new player")
-    @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<ResponseCreatePlayerDTO> createNewPlayer(@Valid @RequestBody RequestCreatePlayerDTO player) {
-        Player newPlayer = this.playerService.handleCreatePlayer(this.playerService.requestPlayerDTOtoPlayer(player));
-        return ResponseEntity.status(HttpStatus.CREATED).body(this.playerService.playerToResponseCreatePlayerDTO(newPlayer));
+    @ApiMessage("Create player")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResponseCreatePlayerDTO> createPlayer(
+            @Valid @RequestPart("data") RequestCreatePlayerDTO dto,
+            @RequestPart(value = "image", required = false) MultipartFile imageFile) {
+
+        Player player = playerService.requestPlayerDTOtoPlayer(dto);
+
+        // Handle image upload if provided
+        if (imageFile != null && !imageFile.isEmpty()) {
+            String imagePath = fileStorageService.storeImage(imageFile, "player");
+            player.setImagePath(imagePath);
+        }
+
+        player = playerService.handleCreatePlayer(player);
+        return ResponseEntity.status(HttpStatus.CREATED).body(playerService.playerToResponseCreatePlayerDTO(player));
     }
 
-    @PutMapping("")
-    @ApiMessage("Update a player")
-    @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<ResponseUpdatePlayerDTO> updateAPlayer(@Valid @RequestBody RequestUpdatePlayerDTO playerDTO) throws InvalidRequestException {
-        Optional<Player> player = this.playerService.getPlayerById(playerDTO.getId());
-        if (player.isEmpty()) {
-            throw new InvalidRequestException("Player with id = " + playerDTO.getId() + " not found.");
+    @PutMapping("/{id}")
+    @ApiMessage("Update player")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResponseUpdatePlayerDTO> updatePlayer(
+            @PathVariable Long id,
+            @Valid @RequestPart("data") RequestUpdatePlayerDTO dto,
+            @RequestPart(value = "image", required = false) MultipartFile imageFile) {
+
+        Player player = playerService.findByPlayerId(id);
+        if (player == null) {
+            throw new ResourceNotFoundException("Player with id = " + id + " not found");
         }
-        Player updatedPlayer = this.playerService.handleUpdatePlayer(player.get(), playerDTO);
-        return ResponseEntity.ok().body(this.playerService.playerToResponseUpdatePlayerDTO(updatedPlayer));
+
+        // Handle image upload if provided
+        if (imageFile != null && !imageFile.isEmpty()) {
+            // Delete old image if exists
+            if (player.getImagePath() != null) {
+                fileStorageService.deleteImage(player.getImagePath());
+            }
+
+            // Store new image
+            String imagePath = fileStorageService.storeImage(imageFile, "player");
+            player.setImagePath(imagePath);
+        }
+
+        player = playerService.handleUpdatePlayer(player, dto);
+        return ResponseEntity.ok(playerService.playerToResponseUpdatePlayerDTO(player));
     }
+
     @GetMapping("/{id}")
     @ApiMessage("Fetch a player")
     public ResponseEntity<ResponsePlayerDTO> fetchAPlayer

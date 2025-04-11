@@ -25,6 +25,10 @@ public class Player {
     private LocalDate dob;
     private int shirtNumber;
     private double marketValue;
+    
+    // Field to store the image URL/path
+    private String imagePath;
+    
     @ElementCollection
     @CollectionTable(name = "player_citizenship", joinColumns = @JoinColumn(name = "player_id"))
     @Column(name = "citizenship")

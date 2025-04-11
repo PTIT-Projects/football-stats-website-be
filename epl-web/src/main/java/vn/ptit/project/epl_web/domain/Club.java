@@ -17,6 +17,10 @@ public class Club {
     private String name;
     private String country;
     private String stadiumName;
+    
+    // Field to store the club logo image URL/path
+    private String imagePath;
+    
     @OneToMany(mappedBy = "club", cascade = CascadeType.ALL)
     private List<CoachClub> coachClubs;
     @OneToMany(mappedBy = "club")

@@ -18,8 +18,11 @@ public class League {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String name;
+    
+    // Field to store the league logo image URL/path
+    private String imagePath;
+    
     @OneToMany(mappedBy = "league",cascade = CascadeType.ALL)
     private List<LeagueSeason> leagueSeasons;
-
 
 }
