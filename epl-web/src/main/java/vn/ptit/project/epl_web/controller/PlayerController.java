@@ -21,7 +21,6 @@ import vn.ptit.project.epl_web.service.FileStorageService;
 import vn.ptit.project.epl_web.service.PlayerService;
 import vn.ptit.project.epl_web.util.annotation.ApiMessage;
 import vn.ptit.project.epl_web.util.exception.InvalidRequestException;
-import vn.ptit.project.epl_web.util.exception.ResourceNotFoundException;
 
 import java.util.Optional;
 
@@ -61,27 +60,27 @@ public class PlayerController {
     public ResponseEntity<ResponseUpdatePlayerDTO> updatePlayer(
             @PathVariable Long id,
             @Valid @RequestPart("data") RequestUpdatePlayerDTO dto,
-            @RequestPart(value = "image", required = false) MultipartFile imageFile) {
+            @RequestPart(value = "image", required = false) MultipartFile imageFile) throws InvalidRequestException {
 
-        Player player = playerService.findByPlayerId(id);
-        if (player == null) {
-            throw new ResourceNotFoundException("Player with id = " + id + " not found");
+        Optional<Player> player = playerService.getPlayerById(id);
+        if (player.isEmpty()) {
+            throw new InvalidRequestException("Player with id = " + id + " not found");
         }
 
         // Handle image upload if provided
         if (imageFile != null && !imageFile.isEmpty()) {
             // Delete old image if exists
-            if (player.getImagePath() != null) {
-                fileStorageService.deleteImage(player.getImagePath());
+            if (player.get().getImagePath() != null) {
+                fileStorageService.deleteImage(player.get().getImagePath());
             }
 
             // Store new image
             String imagePath = fileStorageService.storeImage(imageFile, "player");
-            player.setImagePath(imagePath);
+            player.get().setImagePath(imagePath);
         }
 
-        player = playerService.handleUpdatePlayer(player, dto);
-        return ResponseEntity.ok(playerService.playerToResponseUpdatePlayerDTO(player));
+        Player updatedPlayer = playerService.handleUpdatePlayer(player.get(), dto);
+        return ResponseEntity.ok(playerService.playerToResponseUpdatePlayerDTO(updatedPlayer));
     }
 
     @GetMapping("/{id}")
