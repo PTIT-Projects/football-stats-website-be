@@ -21,8 +21,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1")
 public class FileController {
-    @Value("${upload-file.base-uri}")
-    private String baseURI;
     private final FileService fileService;
 
     public FileController(FileService fileService) {

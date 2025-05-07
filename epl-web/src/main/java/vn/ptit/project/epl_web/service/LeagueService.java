@@ -52,7 +52,7 @@ public class LeagueService {
         return this.mapper.map(league, ResponseUpdateLeagueDTO.class);
     }
     public ResultPaginationDTO fetchAllLeagues(Specification<League>spe,Pageable pageable) {
-        Page<League> leaguePage=this.leagueRepository.findAll(pageable);
+        Page<League> leaguePage=this.leagueRepository.findAll(spe, pageable);
         ResultPaginationDTO result = new ResultPaginationDTO();
         ResultPaginationDTO.Meta meta = new ResultPaginationDTO.Meta();
         meta.setPage(pageable.getPageNumber() + 1);
