@@ -9,42 +9,47 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Map;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import vn.ptit.project.epl_web.util.error.StorageException;
 
 @Service
 public class FileService {
-    @Value("${upload-file.base-uri}")
-    private String baseURI;
 
-    public void createDirectory(String folder) throws URISyntaxException {
-        URI uri = new URI(folder);
-        Path path = Paths.get(uri);
-        File tmpDir = new File(path.toString());
-        if (!tmpDir.isDirectory()) {
-            try {
-                Files.createDirectory(tmpDir.toPath());
-                System.out.println(">>> CREATE NEW DIRECTORY SUCCESSFUL, PATH = " + tmpDir.toPath());
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        } else {
-            System.out.println(">>> SKIP MAKING DIRECTORY, ALREADY EXISTS");
-        }
+    private final Cloudinary cloudinary;
+
+    public FileService(Cloudinary cloudinary) {
+        this.cloudinary = cloudinary;
     }
 
     public String store(MultipartFile file, String folder) throws URISyntaxException,
-            IOException {
-        // create unique filename
-        String finalName = System.currentTimeMillis() + "-" + file.getOriginalFilename();
-        URI uri = new URI(baseURI + folder + "/" + finalName);
-        Path path = Paths.get(uri);
-        try (InputStream inputStream = file.getInputStream()) {
-            Files.copy(inputStream, path,
-                    StandardCopyOption.REPLACE_EXISTING);
+            IOException, StorageException {
+        if (file == null || file.isEmpty()) {
+            throw new StorageException("File is empty");
         }
-        return finalName;
+        try {
+            // Generate a unique filename
+            String originalFilename = file.getOriginalFilename();
+            String uniqueFileName = System.currentTimeMillis() + "-" + originalFilename;
+
+            // Upload to cloudinary
+            Map params = ObjectUtils.asMap(
+                    "public_id", folder + "/" + uniqueFileName.substring(0, uniqueFileName.lastIndexOf('.')),
+                    "overwrite", true,
+                    "resource_type", "auto"
+            );
+
+            Map uploadResult = cloudinary.uploader().upload(file.getBytes(), params);
+
+            // Return the secure URL or public ID as needed
+            return (String) uploadResult.get("secure_url");
+        } catch (IOException e) {
+            throw new StorageException("Failed to store file in Cloudinary");
+        }
     }
 }
