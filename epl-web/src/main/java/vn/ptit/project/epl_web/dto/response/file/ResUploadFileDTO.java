@@ -11,7 +11,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ResUploadFileDTO {
-    private String fileName;
+    private String fileUrl;
     private Instant uploadedAt;
 
 }
