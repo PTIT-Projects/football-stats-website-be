@@ -9,46 +9,26 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface TransferHistoryRepository extends JpaRepository<TransferHistory, Long> {
-    @Query("""
-        SELECT th
-        FROM TransferHistory th
-        WHERE th.date BETWEEN :from AND :to
-          AND (
-            th.club.id = :clubId
-            OR
-            EXISTS (
-              SELECT 1 FROM TransferHistory prev
-              WHERE prev.player.id = th.player.id
-                AND prev.club.id = :clubId
-                AND prev.date < th.date
-            )
-          )
-        ORDER BY th.date DESC
-    """)
+    @Query(value = """
+    SELECT th.*
+    FROM transfer_history th
+    JOIN league_season ls 
+      ON th.date BETWEEN DATE_SUB(ls.start_date, INTERVAL 4 MONTH) AND ls.end_date
+    WHERE ls.id = :seasonId
+      AND (
+        th.club_id = :clubId
+        OR EXISTS (
+          SELECT 1 FROM transfer_history th2
+          WHERE th2.player_id = th.player_id
+            AND th2.club_id = :clubId
+            AND th2.date < th.date
+        )
+      )
+    ORDER BY th.date DESC
+""", nativeQuery = true)
     List<TransferHistory> findAllTransfersByClubAndSeason(
-        @Param("clubId") Long clubId,
-        @Param("from") LocalDate from,
-        @Param("to") LocalDate to
+            @Param("clubId") Long clubId,
+            @Param("seasonId") Long seasonId
     );
 
-    @Query("""
-        SELECT th
-        FROM TransferHistory th
-        WHERE th.date BETWEEN :from AND :to
-          AND th.club.id <> :clubId
-          AND EXISTS (
-            SELECT 1
-            FROM TransferHistory prev
-            WHERE prev.player.id = th.player.id
-              AND prev.club.id = :clubId
-              AND prev.date <= :seasonStart
-          )
-        ORDER BY th.date DESC
-    """)
-    List<TransferHistory> findTransferOutsByClubAndPeriod(
-        @Param("clubId") Long clubId,
-        @Param("seasonStart") LocalDate seasonStart,
-        @Param("from") LocalDate from,
-        @Param("to") LocalDate to
-    );
 }
