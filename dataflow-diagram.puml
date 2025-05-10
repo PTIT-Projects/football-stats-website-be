@@ -1,0 +1,47 @@
+@startuml
+actor Client
+
+rectangle "AuthController\n(login/register/refresh/logout)" as AuthController
+rectangle "SecurityConfig\nSecurityUtil\nCustomUserDetails" as Security
+rectangle "UserService" as UserService
+database "Database\n(User, etc.)" as UserDB
+
+rectangle "Controller Layer\n(PlayerController, ClubController, etc.)" as Controller
+rectangle "Service Layer\n(PlayerService, ClubService, etc.)" as Service
+rectangle "Repository Layer\n(PlayerRepository, ClubRepository, etc.)" as Repository
+database "Database\n(JPA Entities)" as DB
+
+rectangle "FileController" as FileController
+rectangle "FileService" as FileService
+cloud "Cloudinary" as Cloudinary
+
+' --- Authentication Flow ---
+Client --> AuthController : POST /api/v1/auth/login\n(email, password)
+AuthController --> Security : Authenticate user
+Security --> UserService : Load user by email
+UserService --> UserDB : Query user
+UserDB --> UserService : User data
+UserService --> Security : UserDetails
+Security --> AuthController : Auth result
+AuthController --> Security : Generate JWT/Refresh token
+AuthController --> Client : JWT, Refresh Token (cookie)
+
+' --- CRUD/API Flow ---
+Client --> Controller : HTTP Request (REST API)
+Controller --> Service : Call Service Methods
+Service --> Repository : JPA/CRUD/Query
+Repository --> DB : ORM (JPA/Hibernate)
+DB --> Repository : Data
+Repository --> Service : Entities
+Service --> Controller : DTOs/Responses
+Controller --> Client : HTTP Response
+
+' --- File Upload Flow ---
+Client --> FileController : POST /api/v1/files
+FileController --> FileService : store(file, folder)
+FileService --> Cloudinary : upload(file)
+Cloudinary --> FileService : file URL
+FileService --> FileController : file URL
+FileController --> Client : file URL
+
+@enduml
