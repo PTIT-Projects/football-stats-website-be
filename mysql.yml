@@ -6,6 +6,7 @@ services:
     volumes:
       - ./mysql:/var/lib/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./dump.sql:/dump.sql
     environment:
       MYSQL_ROOT_PASSWORD: wp
       MYSQL_USER: test_user
