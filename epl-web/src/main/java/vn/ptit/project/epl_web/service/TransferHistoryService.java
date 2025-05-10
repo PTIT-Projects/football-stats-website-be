@@ -119,26 +119,13 @@ public class TransferHistoryService {
         this.repository.delete(transferHistory);
     }
     public List<ResponseCreateTransferHistoryDTO> getAllTransfersByClubAndSeason(Long clubId, Long seasonId) {
-        LeagueSeason season = this.leagueSeasonRepository.findById(seasonId)
+        LeagueSeason season = leagueSeasonRepository.findById(seasonId)
             .orElseThrow(() -> new EntityNotFoundException("Season not found"));
-        LocalDate seasonStart = season.getStartDate();
-        LocalDate from = seasonStart.minusMonths(2);
-        LocalDate to = season.getEndDate();
+        LocalDate from = season.getStartDate().minusMonths(4);
+        LocalDate to   = season.getEndDate();
 
-        List<TransferHistory> inTransfers = repository.findAllTransfersByClubAndSeason(clubId, seasonId);
-        List<TransferHistory> outTransfers = repository.findTransferOutsByClubAndPeriod(clubId, seasonStart, from, to);
-
-        // Gộp 2 danh sách, loại bỏ trùng theo id, và sắp xếp theo date DESC
-        List<TransferHistory> allTransfers = Stream.concat(inTransfers.stream(), outTransfers.stream())
-            .collect(Collectors.collectingAndThen(
-                Collectors.toMap(TransferHistory::getId, th -> th, (th1, th2) -> th1),
-                m -> {
-                    List<TransferHistory> list = new ArrayList<>(m.values());
-                    list.sort(Comparator.comparing(TransferHistory::getDate).reversed());
-                    return list;
-                }
-            ));
-
+        List<TransferHistory> allTransfers =
+            repository.findAllTransfersByClubAndSeason(clubId, from, to);
         // Tạo map lịch sử đầy đủ theo player
         Set<Long> playerIds = allTransfers.stream()
             .map(th -> th.getPlayer().getId())

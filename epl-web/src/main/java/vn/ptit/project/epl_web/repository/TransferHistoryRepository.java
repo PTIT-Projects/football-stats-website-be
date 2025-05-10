@@ -12,18 +12,23 @@ public interface TransferHistoryRepository extends JpaRepository<TransferHistory
     @Query("""
         SELECT th
         FROM TransferHistory th
-        JOIN LeagueSeason ls ON th.date BETWEEN ls.startDate AND ls.endDate
-        WHERE (th.club.id = :clubId OR th.player.id IN (
-            SELECT p.id
-            FROM Player p
-            JOIN p.transferHistories th2
-            WHERE th2.club.id = :clubId
-        ))
-        AND ls.id = :seasonId
+        WHERE th.date BETWEEN :from AND :to
+          AND (
+            th.club.id = :clubId
+            OR
+            EXISTS (
+              SELECT 1 FROM TransferHistory prev
+              WHERE prev.player.id = th.player.id
+                AND prev.club.id = :clubId
+                AND prev.date < th.date
+            )
+          )
+        ORDER BY th.date DESC
     """)
-    List<vn.ptit.project.epl_web.domain.TransferHistory> findAllTransfersByClubAndSeason(
+    List<TransferHistory> findAllTransfersByClubAndSeason(
         @Param("clubId") Long clubId,
-        @Param("seasonId") Long seasonId
+        @Param("from") LocalDate from,
+        @Param("to") LocalDate to
     );
 
     @Query("""
