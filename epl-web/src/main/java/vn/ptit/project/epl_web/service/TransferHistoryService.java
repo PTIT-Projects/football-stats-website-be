@@ -114,7 +114,9 @@ public class TransferHistoryService {
     public List<ResponseCreateTransferHistoryDTO> getAllTransfersByClubAndSeason(Long clubId, Long seasonId) {
         // Fetch transfers filtered by club and season
         List<TransferHistory> filteredTransfers = this.repository.findAllTransfersByClubAndSeason(clubId, seasonId);
-
+        for (TransferHistory th : filteredTransfers) {
+            System.out.println(th.getPlayer().getName());
+        }
         // Create a set of player IDs from the filtered transfers
         Set<Long> playerIds = filteredTransfers.stream()
                 .map(th -> th.getPlayer().getId())
