@@ -1,24 +1,29 @@
 package vn.ptit.project.epl_web.service;
 
+import jakarta.persistence.EntityNotFoundException;
 import org.apache.coyote.Request;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import vn.ptit.project.epl_web.domain.Club;
+import vn.ptit.project.epl_web.domain.LeagueSeason;
 import vn.ptit.project.epl_web.domain.Player;
 import vn.ptit.project.epl_web.domain.TransferHistory;
 import vn.ptit.project.epl_web.dto.request.transferhistory.RequestCreateTransferHistoryDTO;
 import vn.ptit.project.epl_web.dto.request.transferhistory.RequestUpdateTransferHistoryDTO;
 import vn.ptit.project.epl_web.dto.response.transferhistory.ResponseCreateTransferHistoryDTO;
 import vn.ptit.project.epl_web.repository.ClubRepository;
+import vn.ptit.project.epl_web.repository.LeagueSeasonRepository;
 import vn.ptit.project.epl_web.repository.PlayerRepository;
 import vn.ptit.project.epl_web.repository.TransferHistoryRepository;
 import vn.ptit.project.epl_web.util.exception.InvalidRequestException;
 
 import javax.swing.text.html.Option;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 public class TransferHistoryService {
@@ -26,13 +31,15 @@ public class TransferHistoryService {
     private final ModelMapper mapper;
     private final PlayerRepository playerRepository;
     private final ClubRepository clubRepository;
+    private final LeagueSeasonRepository leagueSeasonRepository;
 
-    public TransferHistoryService(TransferHistoryRepository repository, ModelMapper mapper, PlayerRepository playerRepository, ClubRepository clubRepository)
+    public TransferHistoryService(TransferHistoryRepository repository, ModelMapper mapper, PlayerRepository playerRepository, ClubRepository clubRepository, LeagueSeasonRepository leagueSeasonRepository)
     {
         this.repository = repository;
         this.mapper = mapper;
         this.playerRepository = playerRepository;
         this.clubRepository = clubRepository;
+        this.leagueSeasonRepository = leagueSeasonRepository;
     }
     public TransferHistory createTransferHistory(RequestCreateTransferHistoryDTO dto) throws InvalidRequestException {
         String transferType = dto.getType();
@@ -112,42 +119,47 @@ public class TransferHistoryService {
         this.repository.delete(transferHistory);
     }
     public List<ResponseCreateTransferHistoryDTO> getAllTransfersByClubAndSeason(Long clubId, Long seasonId) {
-        // Fetch transfers filtered by club and season
-        List<TransferHistory> filteredTransfers = this.repository.findAllTransfersByClubAndSeason(clubId, seasonId);
-        for (TransferHistory th : filteredTransfers) {
-            System.out.println(th.getPlayer().getName());
-        }
-        // Create a set of player IDs from the filtered transfers
-        Set<Long> playerIds = filteredTransfers.stream()
-                .map(th -> th.getPlayer().getId())
-                .collect(Collectors.toSet());
+        LeagueSeason season = this.leagueSeasonRepository.findById(seasonId)
+            .orElseThrow(() -> new EntityNotFoundException("Season not found"));
+        LocalDate seasonStart = season.getStartDate();
+        LocalDate from = seasonStart.minusMonths(2);
+        LocalDate to = season.getEndDate();
 
-        // For each player, fetch ALL their transfer history
-        Map<Long, List<TransferHistory>> completeTransferHistoryByPlayer = new HashMap<>();
-        for (Long playerId : playerIds) {
-            Optional<Player> player = playerRepository.findById(playerId);
-            if (player.isPresent()) {
-                List<TransferHistory> completeHistory = player.get().getTransferHistories();
-                completeTransferHistoryByPlayer.put(playerId, completeHistory);
-            }
-        }
+        List<TransferHistory> inTransfers = repository.findAllTransfersByClubAndSeason(clubId, seasonId);
+        List<TransferHistory> outTransfers = repository.findTransferOutsByClubAndPeriod(clubId, seasonStart, from, to);
 
-        // Process each filtered transfer with the context of the complete history
-        List<ResponseCreateTransferHistoryDTO> resultList = new ArrayList<>();
-        for (TransferHistory filteredTransfer : filteredTransfers) {
-            ResponseCreateTransferHistoryDTO dto = transferHistoryToResponseCreateTransferHistoryDTO(filteredTransfer);
+        // Gộp 2 danh sách, loại bỏ trùng theo id, và sắp xếp theo date DESC
+        List<TransferHistory> allTransfers = Stream.concat(inTransfers.stream(), outTransfers.stream())
+            .collect(Collectors.collectingAndThen(
+                Collectors.toMap(TransferHistory::getId, th -> th, (th1, th2) -> th1),
+                m -> {
+                    List<TransferHistory> list = new ArrayList<>(m.values());
+                    list.sort(Comparator.comparing(TransferHistory::getDate).reversed());
+                    return list;
+                }
+            ));
 
-            // Find the previous club from complete history
-            String previousClub = findPreviousClub(
-                    filteredTransfer,
-                    completeTransferHistoryByPlayer.get(filteredTransfer.getPlayer().getId())
-            );
+        // Tạo map lịch sử đầy đủ theo player
+        Set<Long> playerIds = allTransfers.stream()
+            .map(th -> th.getPlayer().getId())
+            .collect(Collectors.toSet());
 
-            dto.setPreviousClub(previousClub);
-            resultList.add(dto);
+        Map<Long, List<TransferHistory>> completeHistoryByPlayer = new HashMap<>();
+        for (Long pid : playerIds) {
+            playerRepository.findById(pid)
+                .map(Player::getTransferHistories)
+                .ifPresent(hist -> completeHistoryByPlayer.put(pid, hist));
         }
 
-        return resultList;
+        // Map sang DTO và xác định previousClub
+        List<ResponseCreateTransferHistoryDTO> result = new ArrayList<>();
+        for (TransferHistory th : allTransfers) {
+            ResponseCreateTransferHistoryDTO dto = transferHistoryToResponseCreateTransferHistoryDTO(th);
+            String prev = findPreviousClub(th, completeHistoryByPlayer.get(th.getPlayer().getId()));
+            dto.setPreviousClub(prev);
+            result.add(dto);
+        }
+        return result;
     }
 
     /**
