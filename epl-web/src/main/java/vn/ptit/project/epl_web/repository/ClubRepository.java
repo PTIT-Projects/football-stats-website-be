@@ -10,6 +10,6 @@ import vn.ptit.project.epl_web.domain.LeagueSeason;
 import java.util.List;
 
 public interface ClubRepository extends JpaRepository<Club, Long>, JpaSpecificationExecutor<Club> {
-    @Query("SELECT DISTINCT cst.season FROM ClubSeasonTable cst WHERE cst.club.id = :clubId")
+    @Query("SELECT DISTINCT cst.season FROM ClubSeasonTable cst WHERE cst.club.id = :clubId ORDER BY cst.season.startDate DESC")
     List<LeagueSeason> findLeagueSeasonsByClubId(@Param("clubId") Long clubId);
 }

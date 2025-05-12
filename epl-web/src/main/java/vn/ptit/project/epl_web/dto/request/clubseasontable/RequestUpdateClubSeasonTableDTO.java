@@ -9,7 +9,7 @@ import lombok.Setter;
 public class RequestUpdateClubSeasonTableDTO {
     @NotNull(message = "ID must not be null")
     private Long id;
-    private int points,numWins,numLosses,numDraws,goalScores,goalConceded,diff;
+    private int numWins,numLosses,numDraws,goalScores,goalConceded;
     private Long season;
     private Long club;
 

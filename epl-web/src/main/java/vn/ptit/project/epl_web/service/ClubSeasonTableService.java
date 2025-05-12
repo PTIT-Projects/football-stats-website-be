@@ -32,6 +32,8 @@ public class ClubSeasonTableService {
     }
     public ClubSeasonTable requestCreateClubSeasonTableDTOtoClubSeasonTable(RequestCreateClubSeasonTableDTO requestCreateClubSeasonTableDTO){
         ClubSeasonTable clubSeasonTable=modelMapper.map(requestCreateClubSeasonTableDTO, ClubSeasonTable.class);
+        clubSeasonTable.setPoints(requestCreateClubSeasonTableDTO.getNumWins() * 3 + requestCreateClubSeasonTableDTO.getNumDraws() * 1);
+        clubSeasonTable.setDiff(requestCreateClubSeasonTableDTO.getGoalScores() - requestCreateClubSeasonTableDTO.getGoalConceded());
         clubSeasonTable.setClub(clubService.getClubById(requestCreateClubSeasonTableDTO.getClub()).get());
         clubSeasonTable.setSeason(leagueSeasonService.findByLeagueSeasonId(requestCreateClubSeasonTableDTO.getSeason()));
         return clubSeasonTable;
@@ -52,6 +54,8 @@ public class ClubSeasonTableService {
         clubSeasonTable.setClub(clubService.getClubById(dto.getClub()).get());
         clubSeasonTable.setSeason(leagueSeasonService.findByLeagueSeasonId(dto.getSeason()));
         clubSeasonTable.setRanked(0);
+        clubSeasonTable.setPoints(dto.getNumWins() * 3 + dto.getNumDraws() * 1);
+        clubSeasonTable.setDiff(dto.getGoalScores() - dto.getGoalConceded());
         ClubSeasonTable res =  clubSeasonTableRepository.save(clubSeasonTable);
         this.leagueSeasonService.updateLeagueTableRankings(res.getSeason().getId());
         return this.getClubSeasonTableById(res.getId()).get();
